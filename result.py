@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Callable, Generic, Protocol, Optional, TypeVar
+
+from typing import Callable, Generic, NoReturn, Optional, Protocol, TypeVar, Union
 from typing_extensions import TypeGuard
 
 
@@ -27,14 +28,9 @@ class InvalidResultStateError(Exception):
     """
     This error represents a result that has reached an invalid state
     """
-    @staticmethod
-    def _construct_msg(result: Result) -> str:
-        return f"Result in invalid state, {result}"
-
     def __init__(self, result: Result):
-        message = self.__class__._construct_msg(result)
-        self.message = message
-        super().__init__(message)
+        self.message = str(result)
+        super().__init__(self.message)
 
 
 class Result(Generic[T, U]):
@@ -114,16 +110,29 @@ class Result(Generic[T, U]):
         else:
             raise InvalidResultStateError(self)
 
-    def if_error_raise(self) -> Result[T, U]:
+    def if_error_raise_wrapped(self) -> Result[T, U]:
         if self._is_errored_state(self._err):
             raise ResultError(self._err)
         return self
 
+    def if_error_raise_direct(self) -> Result[T, U]:
+        if self._is_errored_state(self._err) and isinstance(self._err, Exception):
+            raise self._err
+        return self
+
+    def if_error_raise(self) -> Result[T, U]:
+        if self._is_errored_state(self._err):
+            if isinstance(self._err, Exception):
+                raise self._err
+            else:
+                raise ResultError(self._err)
+        else:
+            return self
+
     def unwrap(self) -> T:
+        self.if_error_raise()
         if self._is_expected_state(self._exp):
             return self._exp
-        elif self._is_errored_state(self._err):
-            raise ResultError(self._err)
         else:
             raise InvalidResultStateError(self)
 
