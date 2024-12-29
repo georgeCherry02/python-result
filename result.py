@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from typing import Callable, Generic, Optional, Protocol, TypeVar
+from enum import Enum
+import inspect
+from typing import Callable, Generic, Optional, Protocol, Type, TypeVar
 from typing_extensions import TypeGuard
 
 
@@ -29,42 +31,52 @@ class InvalidResultStateError(Exception):
     This error represents a result that has reached an invalid state
     """
     def __init__(self, result: Result):
-        self.message = str(result)
+        self.message = f"Invalid state: {result!r}"
         super().__init__(self.message)
 
 
+class ResultState(Enum):
+    Expected = "Ok"
+    Errored = "Err"
+
+
+def is_member_method(tipe: Type, func) -> bool:
+    for _, member in inspect.getmembers(tipe):
+        if member is func:
+            return True
+    return False
+
+
 class Result(Generic[T, U]):
-    def __init__(self, exp: Optional[T], err: Optional[U]):
+    def __init__(self, exp: Optional[T], err: Optional[U], state: ResultState):
         self._exp: Optional[T] = exp
         self._err: Optional[U] = err
-        if not self._valid_state():
+        self._state = state
+        if self._exp is not None and self._err is not None:
             raise InvalidResultStateError(self)
 
     @staticmethod
     def Ok(expected: T) -> Result[T, U]:
-        return Result(exp=expected, err=None)
+        return Result(exp=expected, err=None, state=ResultState.Expected)
 
     @staticmethod
     def Err(error: U) -> Result[T, U]:
-        return Result(exp=None, err=error)
+        return Result(exp=None, err=error, state=ResultState.Errored)
 
-    def _is_expected_state(self, exp: Optional[T]) -> TypeGuard[T]:
-        return exp is not None and self._err is None
+    def _is_expected_state(self, _: Optional[T]) -> TypeGuard[T]:
+        return self._state == ResultState.Expected
+
+    def _is_errored_state(self, _: Optional[U]) -> TypeGuard[U]:
+        return self._state == ResultState.Errored
 
     def is_ok(self) -> bool:
         return self._is_expected_state(self._exp)
 
-    def _is_errored_state(self, err: Optional[U]) -> TypeGuard[U]:
-        return err is not None and self._exp is None
-
     def is_err(self) -> bool:
         return self._is_errored_state(self._err)
 
-    def _valid_state(self) -> bool:
-        return self._is_expected_state(self._exp) or self._is_errored_state(self._err)
-
     def __repr__(self) -> str:
-        return f"Result(exp={self._exp!r}, err={self._err!r})"
+        return f"Result(exp={self._exp!r}, err={self._err!r}, state={self._state})"
 
     def __str__(self) -> str:
         if self._is_expected_state(self._exp):
@@ -80,6 +92,16 @@ class Result(Generic[T, U]):
             return ResultT.Ok(func(self._exp))
         elif self._is_errored_state(self._err):
             return ResultT.Err(self._err)
+        else:
+            raise InvalidResultStateError(self)
+
+    def map_member(self, func: Callable[[T], None]) -> Result[T, U]:
+        if self._is_expected_state(self._exp):
+            assert is_member_method(type(self._exp), func), f"Called map_member with method which is not a member of type={type(self._exp)}"
+            func(self._exp)
+            return self
+        elif self._is_errored_state(self._err):
+            return self
         else:
             raise InvalidResultStateError(self)
 

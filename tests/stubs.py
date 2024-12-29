@@ -9,3 +9,6 @@ class Foo:
             return self.a == other
         else:
             return False
+
+    def increment(self):
+        self.a += 1
