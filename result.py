@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Callable, Generic, NoReturn, Optional, Protocol, TypeVar, Union
+from typing import Callable, Generic, Optional, Protocol, TypeVar
 from typing_extensions import TypeGuard
 
 

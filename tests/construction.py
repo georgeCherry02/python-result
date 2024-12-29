@@ -1,6 +1,8 @@
 import pytest
 from result import Result, InvalidResultStateError
 
+from tests.stubs import Foo
+
 
 def test_explicit_expected_construction():
     Result(5, None)
@@ -18,18 +20,6 @@ def test_expected_helper_initialization():
 
 
 def test_expected_helper_initialization_custom_class():
-    class Foo:
-        def __init__(self, a: int):
-            self.a = a
-
-        def __eq__(self, other) -> bool:
-            if isinstance(other, Foo):
-                return self.a == other.a
-            if isinstance(other, int):
-                return self.a == other
-            else:
-                return False
-
     r = Result.Ok(Foo(5))
     assert isinstance(r, Result), "Result failed to construct at all"
     assert r._exp is not None, "Result.Ok(Foo(5)) failed to instantiate expected value of Foo(5)"
