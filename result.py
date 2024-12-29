@@ -102,8 +102,8 @@ class Result(Generic[T, U]):
             return self
         elif self._is_errored_state(self._err):
             return self
-        else:
-            raise InvalidResultStateError(self)
+
+        raise InvalidResultStateError(self)
 
     def and_then(self, func: Callable[[T], Result[T_PRIME, U]]) -> Result[T_PRIME, U]:
         ResultT = Result[T_PRIME, U]
@@ -111,8 +111,8 @@ class Result(Generic[T, U]):
             return func(self._exp)
         elif self._is_errored_state(self._err):
             return ResultT.Err(self._err)
-        else:
-            raise InvalidResultStateError(self)
+
+        raise InvalidResultStateError(self)
 
     def map_err(self, func: Callable[[U], U_PRIME]) -> Result[T, U_PRIME]:
         ResultT = Result[T, U_PRIME]
@@ -120,8 +120,8 @@ class Result(Generic[T, U]):
             return ResultT.Err(func(self._err))
         elif self._is_expected_state(self._exp):
             return ResultT.Ok(self._exp)
-        else:
-            raise InvalidResultStateError(self)
+
+        raise InvalidResultStateError(self)
 
     def or_else(self, func: Callable[[U], Result[T, U_PRIME]]) -> Result[T, U_PRIME]:
         ResultT = Result[T, U_PRIME]
@@ -129,8 +129,8 @@ class Result(Generic[T, U]):
             return func(self._err)
         elif self._is_expected_state(self._exp):
             return ResultT.Ok(self._exp)
-        else:
-            raise InvalidResultStateError(self)
+
+        raise InvalidResultStateError(self)
 
     def if_error_raise_wrapped(self) -> Result[T, U]:
         if self._is_errored_state(self._err):
